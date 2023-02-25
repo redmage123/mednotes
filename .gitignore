@@ -1,0 +1,31 @@
+# Ignore virtual environment
+/.venv
+
+# Ignore terraform files
+/.terraform
+
+# Ignore media files
+*.wav
+*.mp3
+*.mp4
+*.avi
+*.mkv
+*.webm
+*.ogg
+
+# Ignore Python bytecode files
+__pycache__/
+*.pyc
+
+# Ignore IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*.bak
+
+# Ignore OS-generated files
+.DS_Store
+Thumbs.db
+
