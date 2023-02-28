@@ -6,5 +6,4 @@ from .models import UploadedFile
 class UploadedFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UploadedFile
-        fields = ['id', 'path', 'filename', 'content_type', 'size']
-
+        fields = ["id", "path", "filename", "content_type", "size"]

@@ -1,0 +1,33 @@
+# Base image
+FROM python:3.10
+
+# Set the working directory
+WORKDIR /app
+
+# Set the path for the client_connectivity_service
+ARG module_file_path
+ENV client_connectivity_service_path=$module_file_path:/home/bbrelin/src/repos/app/client_connectivity_service
+
+# Fail if the directory doesn't exist
+RUN if [ ! -d "$client_connectivity_service_path" ]; then \
+      echo "Directory $client_connectivity_service_path not found"; \
+      exit 1; \
+    fi
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+# Copy project files
+COPY . .
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Command to start the server
+CMD [ "python", "/h/manage.py", "runserver", "0.0.0.0:8000" ]
+
+# Instructions to build the Docker image
+# docker build -t client-connectivity-service -f docker/client_connectivity_service/Dockerfile --build-arg module_file_path=/path/to/module .
+

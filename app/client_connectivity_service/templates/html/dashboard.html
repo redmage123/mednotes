@@ -1,0 +1,15 @@
+<div ng-controller="uploadController">
+    <h1>Dashboard</h1>
+    <form name="uploadForm" ng-submit="submitForm()">
+        <div class="form-group">
+            <label for="file">Select a file:</label>
+            <input type="file" name="file" ng-model="file" required>
+        </div>
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary" ng-disabled="uploadForm.$invalid">
+                Upload
+            </button>
+        </div>
+    </form>
+</div>
+
