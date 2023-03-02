@@ -1,40 +1,47 @@
-variable "client_connectivity_service_pod_name" {
+variable "pod_name" {
   type = string
-  default = "client_connectivity-service"
+  default = "client-connectivity-service-pod"
 }
 
-variable "client_connectivity_service_container_name" {
+variable "container_name" {
   type = string
-  default = "client_connectivity-service"
+  default = "client-connectivity-service-container"
 }
 
-variable "client_connectivity_service_image" {
+variable "image" {
   type = string
-  default = "client_connectivity_service-image:latest"
+  default = "client-connectivity-service-image:latest"
 }
 
-variable "client_connectivity_service_container_port" {
+variable "container_port" {
   type = number
   default = 8001
 }
 
-variable "client_connectivity_service_command" {
+variable "command" {
   type = list(string)
-  default = ["python", "-m", "client_connectivity_service"]
+  default = ["python", "$client_connectivity_service_parent_path/manage.py", "runserver", "0.0.0.0:8000"]
 }
 
-variable "client_connectivity_service_name" {
+variable "service_name" {
   type = string
-  default = "client_connectivity-service"
+  default = "client-connectivity-service"
 }
 
-variable "client_connectivity_service_port" {
+variable "service_port" {
   type = number
   default = 8001
 }
 
-variable "client_connectivity_service_type" {
+variable "service_type" {
   type = string
   default = "ClusterIP"
+}
+
+variable "labels" {
+  type = map(string)
+  default = {
+    app = "client-connectivity-service"
+  }
 }
 

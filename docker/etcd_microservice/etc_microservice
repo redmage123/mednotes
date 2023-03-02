@@ -1,0 +1,25 @@
+# Base image
+FROM python:3.10-slim-buster
+
+# Install etcd
+RUN apt-get update && \
+    apt-get install -y etcd && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set the working directory
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+# Copy project files
+COPY . .
+
+# Set environment variables
+ENV ETCD_HOST=etcd
+ENV ETCD_PORT=2379
+
+# Command to start the server
+CMD [ "python", "app.py" ]
+

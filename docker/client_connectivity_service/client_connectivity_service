@@ -4,17 +4,6 @@ FROM python:3.10
 # Set the working directory
 WORKDIR /app
 
-# Set the path for the client_connectivity_service
-ARG module_file_path
-ENV client_connectivity_service_path=$module_file_path:/home/bbrelin/src/repos/app/client_connectivity_service
-ENV client_connectivity_service_parent_path=$(dirname $client_connectivity_service_path)
-
-# Fail if the directory doesn't exist
-RUN if [ ! -d "$client_connectivity_service_path" ]; then \
-      echo "Directory $client_connectivity_service_path not found"; \
-      exit 1; \
-    fi
-
 # Install dependencies
 COPY requirements.txt .
 RUN pip install -r requirements.txt
@@ -25,10 +14,17 @@ COPY . .
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
+ENV DJANGO_SETTINGS_MODULE=client_connectivity.settings
+ENV ETCD_HOST etcd
+ENV ETCD_PORT 2379
+
+# Register with etcd
+COPY ./etcd/etcd_register.py .
+CMD ["python", "etcd_register.py", "client_connectivity_service", "0.0.0.0:8000"]
 
 # Command to start the server
-CMD [ "python", "$client_connectivity_service_parent_path/manage.py", "runserver", "0.0.0.0:8000" ]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "client_connectivity.wsgi"]
 
 # Instructions to build the Docker image
-# docker build -t client-connectivity-service -f docker/client_connectivity_service/Dockerfile --build-arg module_file_path=/path/to/module .
+# docker build -t client-connectivity-service .
 

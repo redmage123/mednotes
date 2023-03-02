@@ -1,0 +1,31 @@
+# Base image
+FROM python:3.10
+
+# Set the working directory
+WORKDIR /app
+
+# Set the path for the audio_extraction_microservice
+ARG module_file_path
+ENV audio_extraction_microservice_path=$module_file_path:/home/bbrelin/src/repos/app/audio_extraction_microservice
+ENV audio_extraction_microservice_parent_path=$(dirname $audio_extraction_microservice_path)
+
+# Fail if the directory doesn't exist
+RUN if [ ! -d "$audio_extraction_microservice_path" ]; then \
+      echo "Directory $audio_extraction_microservice_path not found"; \
+      exit 1; \
+    fi
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+# Copy project files
+COPY . .
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Command to start the server
+CMD [ "python", "app.py" ]
+

@@ -1,0 +1,55 @@
+defaults:
+  - app_root: /home/bbrelin/src/repos/mednotes/app
+  - log_dir: /home/bbrelin/src/repos/mednotes/logs
+  - project_root: /home/bbrelin/src/repos/mednotes
+
+client_connectivity_service:
+  db_url: postgresql://user:password@localhost:5432/mednotes
+  log_dir: ${project_root}/logs
+
+audio_extraction_microservice:
+  input_dir: ${project_root}/data/audio
+  output_dir: ${project_root}/data/input
+  log_dir: ${project_root}/logs
+
+etcd_microservice:
+  etcd_url: http://localhost:2379
+  log_dir: ${project_root}/logs
+
+data_storage_service:
+  data_dir: ${project_root}/data
+  log_dir: ${project_root}/logs
+
+db_connectivity_service:
+  db_url: postgresql://user:password@localhost:5432/mednotes
+  log_dir: ${project_root}/logs
+
+file_processing_microservice:
+  input_dir: ${project_root}/data/input
+  output_dir: ${project_root}/data/output
+  log_dir: ${project_root}/logs
+
+model_training_microservice:
+  data_dir: ${project_root}/data
+  log_dir: ${project_root}/logs
+
+output_microservice:
+  output_dir: ${project_root}/data/output
+  log_dir: ${project_root}/logs
+
+question_comparison_microservice:
+  model_dir: ${project_root}/data/model
+  log_dir: ${project_root}/logs
+
+question_detection_microservice:
+  model_dir: ${project_root}/data/model
+  log_dir: ${project_root}/logs
+
+speech_recognition_microservice:
+  model_dir: ${project_root}/data/model
+  log_dir: ${project_root}/logs
+
+text_preprocessing_service:
+  data_dir: ${project_root}/data
+  log_dir: ${project_root}/logs
+
