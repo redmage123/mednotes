@@ -1,79 +1,112 @@
 import os
 import subprocess
-from typing import Optional
-from etcd_registry import EtcdRegistry
 import requests
-from hydra import compose, initialize
+import logging
+from typing import Optional
+from etcd import Client as EtcdClient
 
-with initialize(config_path="../../../config"):
-    cfg = compose("mednotes")
+logger = logging.getLogger(__name__)
 
-class AudioExtractor:
-    def __init__(self, etcd_host: str, etcd_port: str, etcd_ttl: int, audio_input: str = cfg.audio_input, save_video: Optional[bool] = None):
+class AudioExtractionMicroservice:
+    """
+    Microservice to extract audio from a video file and send the path to the extracted audio file to the text
+    preprocessing microservice for further processing.
+    """
+
+    def __init__(self, etcd_host: str, etcd_port: str, etcd_ttl: int, audio_input: str, save_video: Optional[bool] = None):
         """
-        Initialize AudioExtractor object
+        Constructor for the AudioExtractionMicroservice class.
 
-        :param etcd_host: str, hostname of etcd server
-        :param etcd_port: str, port number of etcd server
+        :param etcd_host: str, hostname of the etcd server
+        :param etcd_port: str, port number of the etcd server
         :param etcd_ttl: int, time-to-live for etcd key
         :param audio_input: str, path to directory to save audio files to
         :param save_video: bool, whether to save the original video file after extracting audio
         """
         self.audio_input = audio_input
         self.save_video = save_video or os.getenv('SAVE_VIDEO') or False
-        self.etcd_registry = EtcdRegistry(etcd_host, etcd_port, etcd_ttl)
-        self.text_preprocessing_service = self.etcd_registry.get_service(cfg.microservices.text_preprocessing.name)
+
+        # Connect to etcd server
+        self.etcd_client = EtcdClient(host=etcd_host, port=etcd_port)
+        self.etcd_ttl = etcd_ttl
+        self.register_microservice()
+
+        # Initialize microservices URLs
+        self.config_microservice_url = None
+        self.logging_microservice_url = None
+        self.text_preprocessing_service_url = None
+
+        # Get microservices URLs from etcd
+        self.get_microservice_urls()
+
+    def register_microservice(self):
+        """
+        Registers the audio extraction microservice with the etcd server.
+        """
+        self.etcd_client.put(f"/microservices/audio_extraction_microservice/{os.getenv('HOSTNAME')}:{os.getenv('PORT')}", f"{os.getenv('HOSTNAME')}:{os.getenv('PORT')}", ttl=self.etcd_ttl)
+        logger.info("Audio Extraction Microservice registered with Etcd server.")
+
+    def get_microservice_urls(self):
+        """
+        Retrieves the URLs for the config, logging, and text preprocessing microservices from the etcd server.
+        """
+        try:
+            response = self.etcd_client.get("/microservices/config")
+            self.config_microservice_url = response.value.decode()
+            logger.info(f"Retrieved config_microservice_url: {self.config_microservice_url}")
+        except Exception as e:
+            logger.error(f"Error occurred while retrieving config_microservice_url: {e}")
+
+        try:
+            response = self.etcd_client.get("/microservices/logging")
+            self.logging_microservice_url = response.value.decode()
+            logger.info(f"Retrieved logging_microservice_url: {self.logging_microservice_url}")
+        except Exception as e:
+            logger.error(f"Error occurred while retrieving logging_microservice_url: {e}")
+
+        try:
+            response = self.etcd_client.get("/microservices/text_preprocessing")
+            self.text_preprocessing_service_url = response.value.decode()
+            logger.info(f"Retrieved text_preprocessing_service_url: {self.text_preprocessing_service_url}")
+        except Exception as e:
+            logger.error(f"Error occurred while retrieving text_preprocessing_service_url: {e}")
 
     def download_file(self, url: str) -> str:
         """
-        Downloads file from given URL and returns the file path
+        Downloads file from the given URL and returns the file path.
 
         :param url: str, URL to download file from
         :return: str, path to downloaded file
         """
-        if 'youtube.com' in url or 'you.tube.com' in url:
-            print(f'Downloading audio from YouTube video at {url}...')
-            command = f'youtube-dl -x --audio-format mp3 {url}'
-        else:
-            print(f'Downloading audio from file at {url}...')
-            command = f'wget {url}'
+        output_file_path = os.path.join(self.audio_input, 'audio_file')
+subprocess.run(['wget', '-O', output_file_path, url])
+return output_file_path
 
-        # Generate a unique file name
-        file_name = f'{os.path.splitext(os.path.basename(url))[0]}_{os.getpid()}.mp3'
-        file_path = os.path.join(self.audio_input, file_name)
+def extract_audio(self, url: str) -> str:
+    """
+    Download the video file from the given URL, extract the audio, and send the path to the extracted audio file to
+    the text preprocessing microservice.
 
-        # Download file
-        subprocess.run(f'{command} -O {file_path}', shell=True, check=True)
+    :param url: str, URL to download video from
+    :return: str, path to extracted audio file
+    """
+    file_path = self.download_file(url)
+    output_file_path = os.path.join(self.audio_input, 'extracted_audio.wav')
+    subprocess.run(['ffmpeg', '-i',
+                    file_path,
+                    '-vn',
+                    '-ar', '44100',
+                    '-ac', '2',
+                    '-b:a', '192k',
+                    output_file_path], check=True)
 
-        return file_path
+    # make REST call to text_preprocessing microservice
+    if self.text_preprocessing_service_url is not None:
+        try:
+            response = requests.post(self.text_preprocessing_service_url, data={'audio_path': output_file_path})
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to make REST call to text_preprocessing service: {e}")
 
-    def extract_audio(self, file_path: str):
-        """
-        Extracts audio from given video file path and saves to self.audio_input directory
-
-        :param file_path: str, path to video file to extract audio from
-        """
-        if not os.path.isfile(file_path):
-            raise ValueError(f'Invalid file path: {file_path}')
-
-        print(f'Extracting audio from {file_path}...')
-
-        # Generate a unique file name
-        file_name = f'{os.path.splitext(os.path.basename(file_path))[0]}_{os.getpid()}.mp3'
-        audio_file_path = os.path.join(self.audio_input, file_name)
-
-        # Extract audio and save to audio_file_path
-        command = f'ffmpeg -i {file_path} -vn -acodec libmp3lame -ar 44100 -ac 2 {audio_file_path}'
-        subprocess.run(command, shell=True, check=True)
-
-        if not self.save_video:
-            # Delete video file
-            os.remove(file_path)
-
-        # Send extracted audio file path to text preprocessing microservice
-        if self.text_preprocessing_service:
-            audio_file_name = os.path.basename(audio_file_path)
-            audio_file_url = f"http://{os.environ['HOSTNAME']}:{cfg.ports.audio_server_port}/audio/{audio_file_name}"
-            data = {"audio_file_url": audio_file_url}
-            headers = {"Content-Type": "application
+    return output_file_path
 

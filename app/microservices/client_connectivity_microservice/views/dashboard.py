@@ -1,4 +1,3 @@
-import logging
 import requests
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
@@ -6,8 +5,12 @@ from django.contrib import messages
 from rest_framework import status
 from forms.forms import UploadFileForm
 from hydra.utils import get_original_cwd
+from app.Microservices import ConfigMicroservice, LoggingMicroservice
 
-logger = logging.getLogger(__name__)
+config_service = ConfigMicroservice()
+logging_service = LoggingMicroservice()
+
+logger = logging_service.get_logger(__name__)
 log_file = f"{get_original_cwd()}/logs/mednotes.log"
 
 @login_required
@@ -16,7 +19,7 @@ def dashboard(request):
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
             audio_file = request.FILES["file"]
-            upload_file_url = "http://localhost:8000/api/upload_file/"
+            upload_file_url = f"{config_service.get_config('upload_service_url')}/api/upload_file/"
             response = requests.post(upload_file_url, files={"file": audio_file})
             if response.status_code == status.HTTP_201_CREATED:
                 return redirect("success")

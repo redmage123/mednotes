@@ -1,10 +1,10 @@
 from django.contrib.auth import authenticate, login
 from django.shortcuts import redirect, render
 from django.views import View
-from hydra.utils import get_original_cwd, instantiate
+from hydra.utils import instantiate
+import logging
 
 logger = logging.getLogger(__name__)
-
 
 class LoginView(View):
     """
@@ -13,12 +13,13 @@ class LoginView(View):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.config = instantiate("config")
+        self.logging_config = instantiate("logging")
 
     def get(self, request):
         """
         Handle GET request to display the login form.
         """
-        return render(request, f"{self.config.templates.login}")
+        return render(request, f"{self.config.templates_path}/html/login.html")
 
     def post(self, request):
         """

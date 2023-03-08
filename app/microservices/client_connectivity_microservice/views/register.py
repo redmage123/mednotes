@@ -1,9 +1,12 @@
+import logging
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
+from hydra.utils import instantiate
 
-from forms.forms import UserRegistrationForm
+logger = logging.getLogger(__name__)
 
+config = instantiate("config")
 
 def user_registration(request):
     if request.method == "POST":
@@ -15,11 +18,13 @@ def user_registration(request):
             user = authenticate(request, username=username, password=password)
             if user is not None:
                 login(request, user)
-                return redirect("dashboard")
+                logger.info(f"{username} registered successfully")
+                return redirect(config.urls.dashboard)
             else:
                 messages.error(request, "Error logging in after registration")
+                logger.error("Error logging in after registration")
     else:
         form = UserRegistrationForm()
 
-    return render(request, "/templates/html/register.html", {"form": form})
+    return render(request, f"{config.templates_path}/html/register.html", {"form": form})
 

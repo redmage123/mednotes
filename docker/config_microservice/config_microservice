@@ -1,0 +1,45 @@
+# Dockerfile for config_microservice
+
+# Set base image
+FROM python:3.10-slim-bullseye
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+
+# Set default project root
+ARG DEFAULT_PROJECT_ROOT=/home/bbrelin/src/repos/mednotes
+
+# Set working directory
+WORKDIR /
+
+# Check if PROJECT_ROOT argument is passed in, otherwise check if PROJECT_ROOT environment variable is defined,
+# otherwise use default project root
+ARG PROJECT_ROOT
+ENV PROJECT_ROOT=${PROJECT_ROOT:-${DEFAULT_PROJECT_ROOT}}
+
+# Install netcat and dependencies
+RUN apt-get update && apt-get install -y netcat && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install requirements
+COPY ${PROJECT_ROOT}/app/microservices/config_microservice/requirements.txt /requirements.txt
+RUN pip install --no-cache-dir -r /requirements.txt
+
+# Copy project files
+COPY ${PROJECT_ROOT}/app/microservices/config_microservice /app/config_microservice
+COPY ${PROJECT_ROOT}/config/mednotes.yml /app/config_microservice/config/
+
+# Set command to invoke the run method
+CMD ["python", "-c", "from app.config_microservice.app import ConfigMicroservice; ConfigMicroservice(etcd_host='localhost', port='2379', config_path='./config/mednotes.yml', project_root='/app/config_microservice').run()"]
+
+# Usage:
+# To build the image with default project root:
+#   docker build -t config_microservice .
+#
+# To build the image with a custom project root (replace "/path/to/project/root" with the desired path):
+#   docker build --build-arg PROJECT_ROOT=/path/to/project/root -t config_microservice .
+#
+# To run the image:
+#   docker run -p 8000:8000 config_microservice
+
